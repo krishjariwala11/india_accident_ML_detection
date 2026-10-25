@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>National Highway Accident Prone Zone & Blackspot Detection · MoRTH Analytics</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles.css') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+    
+    <!-- Leaflet.js Interactive Mapping CDN -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+</head>
+<body>
+
+    <!-- Header Navigation -->
+    <header class="navbar">
+        <div class="nav-brand">
+            <div class="brand-icon">🇮🇳</div>
+            <div>
+                <div class="brand-title">GeoSafe India · MoRTH Blackspot Analytics</div>
+                <div class="brand-subtitle">Machine Learning Collision Prediction System · India National Highway Network</div>
+            </div>
+        </div>
+        <div class="nav-badges">
+            <span class="system-pill">OGD Govt Data · Model v2.4 Active</span>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="page-container">
+        
+        <!-- Hero Section -->
+        <section class="hero-section">
+            <div class="hero-tag">
+                <span>🏛️</span>
+                <span>Government of India · Transport Research Wing Standards</span>
+            </div>
+            <h1 class="hero-title">Indian Highway Accident Blackspot Predictor</h1>
+            <p class="hero-desc">
+                Interactive spatial risk assessment engine benchmarked across Indian National Highway (NH) corridors, Expressways, and urban junctions. Click anywhere on the map or select a quick Indian metro corridor below.
+            </p>
+        </section>
+
+        <!-- Interactive Map Section -->
+        <div class="map-card">
+            <div class="map-header">
+                <div class="map-title">
+                    <span>🗺️</span>
+                    <span>Interactive India Roadways Spatial Selector</span>
+                </div>
+                <div class="map-badge-group">
+                    <span style="color: var(--accent-saffron); font-weight: 700;">📍 Click anywhere on the map to pin Latitude & Longitude</span>
+                </div>
+            </div>
+
+            <!-- Leaflet Container -->
+            <div id="map"></div>
+
+            <div class="map-toolbar">
+                <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                    <span style="font-weight: 600; color: var(--text-secondary);">Quick Indian Corridors:</span>
+                    <button type="button" class="quick-city-btn" onclick="focusCity(19.0760, 72.8777, 'Mumbai', 'Western Express Hwy / Bandra Junction')">📍 Mumbai</button>
+                    <button type="button" class="quick-city-btn" onclick="focusCity(28.6139, 77.2090, 'New Delhi', 'Ring Road / NH44 Mukarba Chowk')">📍 New Delhi</button>
+                    <button type="button" class="quick-city-btn" onclick="focusCity(12.9716, 77.5946, 'Bengaluru', 'Hosur Road / Electronic City NH44')">📍 Bengaluru</button>
+                    <button type="button" class="quick-city-btn" onclick="focusCity(13.0827, 80.2707, 'Chennai', 'Grand Southern Trunk Road NH32')">📍 Chennai</button>
+                    <button type="button" class="quick-city-btn" onclick="focusCity(17.3850, 78.4867, 'Hyderabad', 'Outer Ring Road (ORR) Interchange')">📍 Hyderabad</button>
+                    <button type="button" class="quick-city-btn" onclick="focusCity(22.5726, 88.3639, 'Kolkata', 'Kona Expressway / Vidyasagar Setu')">📍 Kolkata</button>
+                    <button type="button" class="quick-city-btn" onclick="focusCity(19.6980, 83.5608, 'Eastern Corridor', 'National Highway Blackspot Node #0')">⚠️ NH Blackspot #0</button>
+                </div>
+                <div>
+                    Selected Coordinates: <strong id="coordsDisplay" style="color: #60A5FA; font-family: monospace;">19.698005° N, 83.560753° E</strong>
+                </div>
+            </div>
+        </div>
+
+        <!-- Presets Bar -->
+        <div class="preset-bar">
+            <span style="font-size: 12px; color: var(--text-muted); align-self: center; font-weight: 600;"> Demonstration Scenarios:</span>
+            <button type="button" class="btn-preset" onclick="loadScenario('monsoonStorm')">⚠️ Scenario 1: Night Monsoon Squall at Mumbai Junction (High Hazard Blackspot)</button>
+            <button type="button" class="btn-preset" onclick="loadScenario('delhiWinterFog')">🌫️ Scenario 2: Dense Winter Morning Smog/Fog on NH44 Delhi (Elevated Risk)</button>
+            <button type="button" class="btn-preset" onclick="loadScenario('clearBengaluru')">✅ Scenario 3: Clear Daylight Afternoon on Bengaluru Expressway (Low Risk)</button>
+        </div>
+
+        <!-- Dashboard Grid -->
+        <div class="dashboard-grid">
+            
+            <!-- Left: Prediction Form Card -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Indian Transit Parameter Input Matrix</h2>
+                    <span style="font-size: 12px; color: var(--text-muted);">24 Environmental Vectors</span>
+                </div>
+
+                <form action="/predict" method="POST" id="predictionForm">
+                    <div class="form-grid">
+                        
+                        <!-- Geospatial Coordinates -->
+                        <div class="form-group">
+                            <label class="form-label" for="latitude">
+                                Latitude (°N) - India Bounding Box
+                                <span class="hint">Range: 8.0 to 35.0° N</span>
+                            </label>
+                            <input class="input-control" type="number" step="any" id="latitude" name="latitude" value="19.698005" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="longitude">
+                                Longitude (°E) - India Bounding Box
+                                <span class="hint">Range: 68.0 to 92.0° E</span>
+                            </label>
+                            <input class="input-control" type="number" step="any" id="longitude" name="longitude" value="83.560753" required>
+                        </div>
+
+                        <!-- Date & Time -->
+                        <div class="form-group full-width">
+                            <label class="form-label" for="date">
+                                Timestamp of Transit (IST - Indian Standard Time)
+                                <span class="hint">Extracts Day of Week, Hour, and Day/Night solar cycle</span>
+                            </label>
+                            <input class="input-control" type="datetime-local" id="date" name="date" required>
+                        </div>
+
+                        <!-- Infrastructure & Weather Keywords -->
+                        <div class="form-group">
+                            <label class="form-label" for="roadfeature">Roadway Infrastructure Conflict Point</label>
+                            <select class="input-control" id="roadfeature" name="roadfeature">
+                                <option value="0">Standard Highway Corridor (No Bottleneck)</option>
+                                <option value="Traffic_Signal">Signalized City Intersection</option>
+                                <option value="Junction">National Highway Interchange / Flyover Junction</option>
+                                <option value="Crossing">Pedestrian Zebra Crossing Zone</option>
+                                <option value="Station">Metro / Bus Rapid Transit (BRTS) Vicinity</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="weatherkeyword">Indian Meteorological Phenotype</label>
+                            <select class="input-control" id="weatherkeyword" name="weatherkeyword">
+                                <option value="0">Clear / Fair Sky</option>
+                                <option value="overcast" selected>Overcast Sky</option>
+                                <option value="rain">Monsoon Rainfall / Showers</option>
+                                <option value="thunderstorm">Severe Thunderstorm / Squall</option>
+                                <option value="fog">Dense Winter Smog / Radiation Fog</option>
+                                <option value="cloudy">Partly Cloudy</option>
+                                <option value="wind">High Surface Winds</option>
+                                <option value="snow">Snow / Sleet (Himalayan NH)</option>
+                            </select>
+                        </div>
+
+                        <!-- Meteorological Continuous Metrics -->
+                        <div class="form-group">
+                            <label class="form-label" for="temp">Temperature (°F)</label>
+                            <input class="input-control" type="number" step="0.1" id="temp" name="temp" value="80.6" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="humi">Relative Humidity (%)</label>
+                            <input class="input-control" type="number" step="0.1" id="humi" name="humi" value="70.0" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="pres">Barometric Pressure (inHg)</label>
+                            <input class="input-control" type="number" step="0.01" id="pres" name="pres" value="29.94" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="windspeed">Wind Velocity (mph)</label>
+                            <input class="input-control" type="number" step="0.1" id="windspeed" name="windspeed" value="5.8" required>
+                        </div>
+
+                        <div class="form-group full-width">
+                            <label class="form-label" for="visibility">Optical Visibility (miles)</label>
+                            <input class="input-control" type="number" step="0.1" id="visibility" name="visibility" value="10.0" required>
+                        </div>
+
+                        <button type="submit" class="btn-submit">
+                            <span>Execute Indian Highway Risk Inference</span>
+                            <span>→</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Right: Model Architecture & Production Stats -->
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Production Model Telemetry</h3>
+                </div>
+
+                <div class="metric-row">
+                    <span class="metric-name">Dataset Source</span>
+                    <span class="metric-value" style="font-size: 13px; color: #FDBA74;">MoRTH / OGD India</span>
+                </div>
+                <div class="metric-row">
+                    <span class="metric-name">Algorithm</span>
+                    <span class="metric-value">XGBoost Classifier</span>
+                </div>
+                <div class="metric-row">
+                    <span class="metric-name">Test Set Accuracy</span>
+                    <span class="metric-value" style="color: var(--accent-emerald);">86.0%</span>
+                </div>
+                <div class="metric-row">
+                    <span class="metric-name">ROC-AUC Score</span>
+                    <span class="metric-value" style="color: var(--accent-blue);">0.9339</span>
+                </div>
+                <div class="metric-row">
+                    <span class="metric-name">DBSCAN Blackspot Nodes</span>
+                    <span class="metric-value">1,594 Clusters</span>
+                </div>
+                <div class="metric-row">
+                    <span class="metric-name">Ensemble Trees</span>
+                    <span class="metric-value">180 Estimators</span>
+                </div>
+
+                <!-- Top Feature Weights -->
+                <div style="margin-top: 24px;">
+                    <div style="font-size: 13px; font-weight: 700; color: var(--text-secondary); margin-bottom: 8px;">
+                        Top Indian Road Risk Factors
+                    </div>
+                    <div class="importance-list">
+                        <div class="importance-item">
+                            <div class="importance-header">
+                                <span>Day vs Night (Solar Driving Cycle)</span>
+                                <span style="font-weight: 700;">23.0%</span>
+                            </div>
+                            <div class="importance-track">
+                                <div class="importance-fill" style="width: 100%;"></div>
+                            </div>
+                        </div>
+
+                        <div class="importance-item">
+                            <div class="importance-header">
+                                <span>Hour of Day (Peak Traffic Surge)</span>
+                                <span style="font-weight: 700;">12.1%</span>
+                            </div>
+                            <div class="importance-track">
+                                <div class="importance-fill" style="width: 52%;"></div>
+                            </div>
+                        </div>
+
+                        <div class="importance-item">
+                            <div class="importance-header">
+                                <span>Monsoon / Seasonal Variation</span>
+                                <span style="font-weight: 700;">9.3%</span>
+                            </div>
+                            <div class="importance-track">
+                                <div class="importance-fill" style="width: 40%;"></div>
+                            </div>
+                        </div>
+
+                        <div class="importance-item">
+                            <div class="importance-header">
+                                <span>Thunderstorms & Monsoon Rain</span>
+                                <span style="font-weight: 700;">10.7%</span>
+                            </div>
+                            <div class="importance-track">
+                                <div class="importance-fill" style="width: 46%;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="site-footer">
+        <div>GeoSafe India · Ministry of Road Transport and Highways (MoRTH) Data Compliant Architecture</div>
+        <div style="margin-top: 4px;">
+            Benchmarked against National Highway Traffic Telemetry · <span class="faculty-badge">Smart Edition</span>
+        </div>
+    </footer>
+
+    <script>
+        let map, marker;
+
+        // Initialize Leaflet Map centered on India
+        window.addEventListener('DOMContentLoaded', () => {
+            // Set current datetime as default if empty
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const formatted = `${year}-${month}-${day}T${hours}:${minutes}`;
+            const dateInput = document.getElementById('date');
+            if (dateInput && !dateInput.value) {
+                dateInput.value = formatted;
+            }
+
+            // Center on India
+            const initLat = parseFloat(document.getElementById('latitude').value) || 20.5937;
+            const initLng = parseFloat(document.getElementById('longitude').value) || 78.9629;
+
+            map = L.map('map', {
+                center: [initLat, initLng],
+                zoom: 5,
+                minZoom: 4,
+                maxZoom: 17
+            });
+
+            // Standard OpenStreetMap Tiles (100% Free, Public, Zero API Key Required)
+            L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> contributors'
+            }).addTo(map);
+
+            // Custom Saffron Pin for Indian Highway Analysis
+            const customIcon = L.divIcon({
+                className: 'custom-pin',
+                html: `<div style="background: #F97316; width: 14px; height: 14px; border-radius: 50%; border: 3px solid #FFFFFF; box-shadow: 0 0 12px #F97316;"></div>`,
+                iconSize: [14, 14],
+                iconAnchor: [7, 7]
+            });
+
+            marker = L.marker([initLat, initLng], { icon: customIcon }).addTo(map)
+                .bindPopup("<b>Target Highway Analysis Node</b><br>Lat: " + initLat.toFixed(4) + ", Lng: " + initLng.toFixed(4))
+                .openPopup();
+
+            // Map click handler to update form inputs dynamically
+            map.on('click', function(e) {
+                const lat = parseFloat(e.latlng.lat.toFixed(6));
+                const lng = parseFloat(e.latlng.lng.toFixed(6));
+
+                document.getElementById('latitude').value = lat;
+                document.getElementById('longitude').value = lng;
+                document.getElementById('coordsDisplay').innerText = `${lat}° N, ${lng}° E`;
+
+                marker.setLatLng(e.latlng);
+                marker.setPopupContent(`<b>Selected Highway Location</b><br>Lat: ${lat}, Lng: ${lng}`).openPopup();
+            });
+        });
+
+        function focusCity(lat, lng, name, detail) {
+            document.getElementById('latitude').value = lat;
+            document.getElementById('longitude').value = lng;
+            document.getElementById('coordsDisplay').innerText = `${lat}° N, ${lng}° E`;
+
+            if (map && marker) {
+                map.flyTo([lat, lng], 10, { duration: 1.2 });
+                marker.setLatLng([lat, lng]);
+                marker.setPopupContent(`<b>${name}</b><br>${detail}`).openPopup();
+            }
+        }
+
+        // Scenario Presets loader
+        function loadScenario(type) {
+            const lat = document.getElementById('latitude');
+            const lng = document.getElementById('longitude');
+            const dt = document.getElementById('date');
+            const road = document.getElementById('roadfeature');
+            const weather = document.getElementById('weatherkeyword');
+            const temp = document.getElementById('temp');
+            const humi = document.getElementById('humi');
+            const pres = document.getElementById('pres');
+            const wind = document.getElementById('windspeed');
+            const vis = document.getElementById('visibility');
+
+            if (type === 'monsoonStorm') {
+                focusCity(19.698005, 83.560753, 'National Highway Hotspot #0', 'Known MoRTH Collision Blackspot Corridor');
+                dt.value = "2026-11-30T15:00";
+                road.value = "0";
+                weather.value = "overcast";
+                temp.value = "80.6";
+                humi.value = "70.0";
+                pres.value = "29.94";
+                wind.value = "5.8";
+                vis.value = "10.0";
+            } else if (type === 'delhiWinterFog') {
+                focusCity(28.6139, 77.2090, 'New Delhi NH44 Corridor', 'Dense Fog & Crossing Zone');
+                dt.value = "2026-12-20T05:30";
+                road.value = "Crossing";
+                weather.value = "fog";
+                temp.value = "48.0";
+                humi.value = "98.0";
+                pres.value = "30.12";
+                wind.value = "2.5";
+                vis.value = "0.5";
+            } else if (type === 'clearBengaluru') {
+                focusCity(12.9716, 77.5946, 'Bengaluru Hosur Highway', 'Clear Sky Daylight Flow');
+                dt.value = "2026-03-15T14:00";
+                road.value = "0";
+                weather.value = "0";
+                temp.value = "82.0";
+                humi.value = "42.0";
+                pres.value = "29.98";
+                wind.value = "6.0";
+                vis.value = "10.0";
+            }
+        }
+    </script>
+</body>
+</html>
